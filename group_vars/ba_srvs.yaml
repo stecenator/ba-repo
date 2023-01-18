@@ -1,0 +1,15 @@
+---
+# Zmienne dla serwerów repozytoriów pakietów B/A
+# marcin_stec@pl.ibm.com
+
+lun: "/dev/vdb"
+vg: "repovg"
+lv: "repolv"
+doc_root: "/var/www"
+ba_root: "{{ doc_root }}/ba"
+srv_pkgs:
+  - lighttpd
+  - createrepo_c
+  - lvm2
+
+se_lnx: True

@@ -1,0 +1,54 @@
+---
+# Instalacja serwera repozytorium pakietów BA
+# marcin_stec@pl.ibm.com
+
+- hosts: ba_srvs
+  gather_facts: True
+  remote_user: root
+
+  tasks:
+    - name: Pakiety serwera repozytorium
+      dnf:
+        name: "{{ srv_pkgs }}"
+        state: latest
+      tags:
+        - "SRV_PKGS"
+    - name: VG dla repozytorium
+      lvg:
+        vg: "{{ vg }}"
+        pvs: "{{ lun }}"
+      tags:
+        - "LVM"
+    - name: LV dla repozytorium
+      lvol:
+        vg: "{{ vg }}"
+        lv: "{{ lv }}"
+        size: 100%FREE
+      tags:
+        - "LVM"
+    - name: Punkt mntowania repozytorium
+      file:
+        name: "{{ doc_root }}"
+        state: directory
+        mode: 0755
+    - name: Formatowanie filesystemu XFS
+      filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg }}/{{ lv }}"
+      tags:
+        - "FS"
+    - name: Montowanie filesystemu
+      mount:
+        path: "{{ doc_root }}"
+        src: "/dev/{{ vg }}/{{ lv }}"
+        fstype: xfs
+        state: mounted
+      tags:
+        - "FS"
+    - name: Podkatalog repozytorium
+      file:
+        name: "{{ ba_root }}"
+        state: directory
+        mode: 0755
+      tags:
+        - "FS"
