@@ -5,11 +5,25 @@
 lun: "/dev/vdb"
 vg: "repovg"
 lv: "repolv"
-doc_root: "/var/www"
+www_mnt: "/var/www"
+doc_root: "{{ www_mnt }}/lighttpd"
 ba_root: "{{ doc_root }}/ba"
 srv_pkgs:
   - lighttpd
   - createrepo_c
   - lvm2
+  - vim-enhanced
+  - tar
+  - unzip
+  - gzip
+  - python3-libselinux
+  - python3-libsemanage
+  - policycoreutils-python-utils
 
 se_lnx: True
+
+fw_services:
+  - http
+  - https
+
+latest_ba_tar: "8.1.17.0-TIV-TSMBAC-LinuxX86.tar"
