@@ -43,18 +43,18 @@ Wszyskie zmienne są w pliku `roles/ba_srv/vars/main.yaml`.
 - **srv_pkgs** - lista pakietów jakie trzeba zainstalować w ramach przygotowania serwera WWW.
 
      ```
-srv_pkgs:
-  - lighttpd
-  - createrepo_c
-  - lvm2
-  - vim-enhanced
-  - tar
-  - unzip
-  - gzip
-  - python3-libselinux
-  - python3-libsemanage
-  - policycoreutils-python-utils
-```
+     srv_pkgs:
+       - lighttpd
+       - createrepo_c
+       - lvm2
+       - vim-enhanced
+       - tar
+       - unzip
+       - gzip
+       - python3-libselinux
+       - python3-libsemanage
+       - policycoreutils-python-utils
+     ```
 
 - **se_lnx** - kontroluje czy SELinux jest w trybie *enforcing*. Serwer w trybie *permissive* albo *disabled* jest zepsuty, więc nie ruszać!
 
@@ -63,10 +63,10 @@ srv_pkgs:
 - **fw_services** - dziurki do otwarcia w firewallu. NAzwy usług zgodne z `firewalld`.
 
      ```
-fw_services:
-  - http
-  - https
-```
+     fw_services:
+       - http
+       - https
+     ```
 
 ## Zadania w playbooku `ba_srv.yaml`
 
@@ -132,9 +132,9 @@ $HTTP["url"] =~ "^/ba($|/)" {
 Dla serwera z uruchomionym *SELinuxem*: Lighttpd nie dodaje polityki dla swojego standardowego katalogu na html'e!! Bez tego selinux nie pozwala serwerowi serwować czegokolwiek. Kontekst:
 
 ```
-	target: '{{ doc_root }}(/.*)?'
-    seuser: "system_u"
-    setype: "httpd_sys_rw_content_t"
+     target: '{{ doc_root }}(/.*)?'
+     seuser: "system_u"
+     setype: "httpd_sys_rw_content_t"
 ```
 
 ### Tworzenie repozytorium RPM w {{ ba_root }}
