@@ -1,0 +1,18 @@
+---
+# Główny task roli ba_srv.
+# Zwależności od zmiennej repo_refresh wykonuje odświeżenie repozytorium
+# marcin_stec@pl.ibm.com
+
+  - name: Pełna instlacja serwera pakietów
+    include_tasks: 
+      file: "ba_srv_inst.yaml"
+    when: not repo_refresh
+    tags:
+      - "BA_SRV_INST"
+
+  - name: Odświeżenie repozytorium z lokalnej kopii archiwum TAR pakietów BA
+    include_tasks:
+      file: "ba_srv_refresh.yaml"
+    when: repo_refresh
+    tags:
+      - "BA_SRV_REFRESH"

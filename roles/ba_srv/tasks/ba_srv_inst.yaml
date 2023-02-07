@@ -1,0 +1,163 @@
+---
+# Główny task instalacji serwera repozytorium pakietów BA
+# marcin_stec@pl.ibm.com
+
+  - name: Status repozytorium
+    stat:
+      path: "{{ ba_root }}/repodata"
+    register: repo
+
+  - name: Unikanie nadpisania istniejącego repozytorium
+    assert:
+      fail_msg: "Repozytorium {{ ba_root }}/repodata istnieje. Pierdolę, nie robię."
+      success_msg: "Nie znaleziono katalogu {{ ba_root }}/repodata. Kontynuję konfigurację"
+    when: repo.stat.exists
+
+  - name: Pakiety serwera repozytorium
+    dnf:
+      name: "{{ srv_pkgs }}"
+      state: latest
+    tags:
+      - "SRV_PKGS"
+
+  - name: VG dla repozytorium
+    lvg:
+      vg: "{{ vg }}"
+      pvs: "{{ lun }}"
+    tags:
+      - "LVM"
+
+  - name: LV dla repozytorium
+    lvol:
+      vg: "{{ vg }}"
+      lv: "{{ lv }}"
+      size: 100%FREE
+      shrink: False
+    tags:
+      - "LVM"
+
+  - name: Punkt mntowania repozytorium
+    file:
+      name: "{{ www_mnt }}"
+      state: directory
+      mode: 0755
+
+  - name: Formatowanie filesystemu XFS
+    filesystem:
+      fstype: xfs
+      dev: "/dev/{{ vg }}/{{ lv }}"
+    tags:
+      - "FS"
+
+  - name: Montowanie filesystemu
+    mount:
+      path: "{{ www_mnt }}"
+      src: "/dev/{{ vg }}/{{ lv }}"
+      fstype: xfs
+      state: mounted
+    tags:
+      - "FS"
+
+  - name: Podkatalog repozytorium
+    file:
+      name: "{{ ba_root }}"
+      state: directory
+      owner: "lighttpd"
+      group: "lighttpd"
+      mode: 0755
+    tags:
+      - "FS"
+
+  - name: Otwieranie portów firewalla
+    firewalld:
+      service: "{{ item }}"
+      state: enabled
+      permanent: yes
+    with_items: "{{ fw_services }}"
+    tags:
+      - "FW"
+      - "SEC"
+
+  - name: Ustawianie bulionów dla Lighttpd
+    seboolean:
+      name: httpd_setrlimit
+      state: true
+      persistent: true
+    when: ansible_facts.selinux.status == 'enabled'
+    tags:
+      - "HTTPD"
+      - "SEC"
+
+  - name: Wrzucanie pliku index.html
+    template:
+      src: index.html.j2
+      dest: "{{ doc_root }}/index.html"
+      owner: "lighttpd"
+      group: "lighttpd"
+    tags:
+      - "HTTPD"
+
+  - name: "Odpakowanie TARa z klientem BA do {{ ba_root }}"
+    unarchive:
+      src: "{{ latest_ba_tar }}"
+      dest: "{{ ba_root }}"
+      creates: "{{ ba_root }}/update.txt"
+    become_user: "lighttpd"
+    tags:
+      - "HTTPD"
+      - "BA"
+
+  - name: "Zezwolenie na directory browsing w {{ ba_root }}"
+    copy:
+      src: dirlisting.conf
+      dest: "/etc/lighttpd/conf.d/"
+    tags:
+      - "HTTPD"
+
+  - name: "Dodawanie polityk SELinux dla katalogu {{ doc_root}}"
+    sefcontext:
+      target: '{{ doc_root }}(/.*)?'
+      seuser: "system_u"
+      setype: "httpd_sys_rw_content_t"
+      state: present
+    when: ansible_facts.selinux.status == 'enabled'
+    tags:
+      - "SEC"
+      - "HTTPD"
+      - "BA"
+
+  - name: "Tworzenie repozytorium RPM w {{ ba_root }}"
+    command: 
+      cmd: createrepo {{ ba_root }}
+      creates: "{{ ba_root }}/repodata"
+    become_user: "lighttpd"
+    tags:
+      - "BA"
+      - "REPO"
+
+  - name: "Generowanie pliku repozytorium {{ ba_root }}/ba.repo"
+    template:
+      src: ba.repo.j2
+      dest: "{{ ba_root }}/ba.repo"
+      owner: "lighttpd"
+      group: "lighttpd"
+      mode: 0644
+    tags:
+      - "BA"
+      - "REPO"
+
+  - name: "Ustawianie kontekstu SELinux na {{ doc_root }}"
+    command: restorecon -irv "{{ doc_root }}"
+    when: ansible_facts.selinux.status == 'enabled'
+    tags:
+      - "SEC"
+      - "HTTPD"
+      - "BA"
+
+  - name: Włączanie Lighttpd
+    systemd:
+      name: lighttpd.service
+      state: reloaded
+      enabled: true
+    tags:
+      - "HTTPD"
