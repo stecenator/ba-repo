@@ -68,7 +68,7 @@ Wszyskie zmienne są w pliku `roles/ba_srv/vars/main.yaml`.
        - https
      ```
 
-## Zadania w playbooku `ba_srv.yaml`
+## Zadania w playbooku `ba_srv_inst.yaml`
 
 ### Pakiety serwera repozytorium
 
@@ -154,3 +154,42 @@ To zadanie nie jest idempotentne, ale to nie szkodzi. `restorecon` jest zawsze z
 ### Włączanie Lighttpd
 
 W końcu można używać.
+
+## Zadania w tasku `ba_srv_refresh.yaml`
+
+Ten task ma za zadanie rozpakować archiwum wskazane przez zminną `latest_ba_tar` do już istniejącego repozytorium wskazanego zmienną `ba_root` i przebudować `repodata`.
+
+**To do:** 
+1. Być może warto dodać sprawdzanie co jest nadpisywane. Na razie uruchmienie playbooka zawsze nadpisze repo.
+1. Dodać kod sprawdzający 
+
+### Odpakowanie TARa z klientem BA do {{ ba_root }}
+
+Rozpakowuje paczkę `{{ lates_ba_tar }}` do `{{ ba_root }}`. 
+
+**Uwaga:** Tutaj usunięto parametr `creates`, co powoduje, że to zdanie się zawsze wykona!
+
+### Dodawanie polityk SELinux dla katalogu {{ doc_root}}
+
+Dla serwera z uruchomionym *SELinuxem*: Lighttpd nie dodaje polityki dla swojego standardowego katalogu na html'e!! Bez tego selinux nie pozwala serwerowi serwować czegokolwiek. Kontekst:
+
+```
+     target: '{{ doc_root }}(/.*)?'
+     seuser: "system_u"
+     setype: "httpd_sys_rw_content_t"
+```
+
+### Tworzenie repozytorium RPM w {{ ba_root }}
+
+Wywołanie `createrepo {{ ba_root }}`. Tworzy repozytorium yum/dnf. 
+**Uwaga:** Tutaj usunięto parametr `creates`, co powoduje, że to zdanie się zawsze wykona!
+
+### Generowanie pliku repozytorium {{ ba_root }}/ba.repo
+
+Dla leniwych. Tworzy plik z definicją repozytorium. Można go sobie siągnąć i wrzucić do `/etc/yum.repos.d` i skorzystać z tego serwera do instalacji paczek klienta Spectrum Protect.
+
+### Ustawianie kontekstu SELinux na {{ doc_root }}
+
+Po skończonym dodawaniu plików do `{{ doc_root }}` trzeba ustawić kontekst przypisany wcześniej, bo inaczej nic nie będzie widać. 
+
+To zadanie nie jest idempotentne, ale to nie szkodzi. `restorecon` jest zawsze zdrowy ;-)

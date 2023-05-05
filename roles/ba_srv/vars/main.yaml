@@ -26,4 +26,4 @@ fw_services:
   - http
   - https
 
-latest_ba_tar: "8.1.17.0-TIV-TSMBAC-LinuxX86.tar"
+latest_ba_tar: "8.1.17.2-TIV-TSMBAC-LinuxX86.tar"

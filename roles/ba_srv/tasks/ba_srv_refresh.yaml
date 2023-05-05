@@ -1,0 +1,50 @@
+---
+# marcin_stec@pl.ibm.com
+  - name: Sprawdzenie czy można odświeżyć repo
+    block:
+      - name: "Sprawdzanie czy w {{ ba_root }} jest repozytorium"
+        stat:
+          path: "{{ ba_root }}/update.txt"
+        register: ba_exists
+
+      - name: "Przerwanie playbooka jeśli nie nic do napisania"
+        fail: 
+          msg: "Plik {{ ba_root }}/update.txt nie istnieje. Załóż repozytorium."
+        when: ba_exists.stat.exists == False
+    ignore_errors: False
+
+  - name: "Odpakowanie TARa z klientem BA do {{ ba_root }}"
+    unarchive:
+      src: "{{ latest_ba_tar }}"
+      dest: "{{ ba_root }}"
+#      creates: "{{ ba_root }}/update.txt"
+    become_user: "lighttpd"
+    tags:
+      - "BA-REFRESH"
+
+  - name: "Dodawanie polityk SELinux dla katalogu {{ doc_root}}"
+    sefcontext:
+      target: '{{ doc_root }}(/.*)?'
+      seuser: "system_u"
+      setype: "httpd_sys_rw_content_t"
+      state: present
+    when: ansible_facts.selinux.status == 'enabled'
+    tags:
+      - "SEC"
+      - "BA-REFRESH"
+
+  - name: "Tworzenie repozytorium RPM w {{ ba_root }}"
+    command: 
+      cmd: createrepo {{ ba_root }}
+#      creates: "{{ ba_root }}/repodata"
+    become_user: "lighttpd"
+    tags:
+      - "BA-REFRESH"
+      - "REPO"
+
+  - name: "Ustawianie kontekstu SELinux na {{ doc_root }}"
+    command: restorecon -irv "{{ doc_root }}"
+    when: ansible_facts.selinux.status == 'enabled'
+    tags:
+      - "SEC"
+      - "BA-REFRESH"

@@ -1,0 +1,14 @@
+---
+# Instalacja serwera repozytorium pakietów BA
+# Wywołuje rolę z katalogu roles/ba_srv/tasks
+# marcin_stec@pl.ibm.com
+
+- hosts: ba_srvs
+  gather_facts: True
+  remote_user: root
+
+  roles:
+    - role: ba_srv
+      repo_refresh: True # Ten playbook ma odświeżać repozytorium BA na wcześniej zainstalowanym serwerze.
+      tags:
+        - "BA_SRV"
